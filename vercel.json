@@ -1,7 +1,0 @@
-{
-  "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "cd jmk-contents-web && npm run build",
-  "devCommand": "cd jmk-contents-web && npm run dev",
-  "installCommand": "cd jmk-contents-web && npm install",
-  "outputDirectory": "jmk-contents-web/.next"
-}
