@@ -66,7 +66,7 @@ Claude Code는 Anthropic의 공식 CLI 도구로, AI와 함께 소프트웨어 �
 
 ### JMK Contents 웹 플랫폼 (2026-02-05)
 
-#### 완료된 작업
+#### Phase 1 완료
 - ✅ Next.js 15 프로젝트 초기화
 - ✅ Supabase 클라이언트 설정 (client.ts, server.ts, types.ts)
 - ✅ shadcn/ui 컴포넌트 라이브러리 설치
@@ -78,9 +78,20 @@ Claude Code는 Anthropic의 공식 CLI 도구로, AI와 함께 소프트웨어 �
 - ✅ 반응형 디자인 구현
 - ✅ 프로덕션 빌드 테스트
 
-#### 다음 단계
-- Supabase 데이터베이스 테이블 생성
-- 앱 상세 페이지 동적 라우트 구현
-- Supabase에서 실제 데이터 가져오기
+#### Phase 2 완료 (2026-02-05)
+- ✅ Supabase 데이터베이스 스키마 작성 (SQL migration)
+- ✅ 환경 변수 설정 (.env, .env.local)
+- ✅ Supabase API 함수 작성 (apps.ts, contact.ts)
+- ✅ Admin 클라이언트 생성 (static generation용)
+- ✅ 앱 상세 페이지 동적 라우트 구현
+- ✅ 홈페이지 Supabase 데이터 연동
+- ✅ 앱 목록 페이지 데이터 연동
+- ✅ SSG(Static Site Generation) 구현
+- ✅ 프로덕션 빌드 성공
+
+#### 다음 단계 (Phase 3)
 - Vercel 배포
 - Cloudflare DNS 설정
+- 앱 개념/강의 페이지 구현
+- 이미지 업로드 및 Storage 연동
+- 관리자 대시보드 (선택사항)
