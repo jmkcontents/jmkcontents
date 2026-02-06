@@ -8,7 +8,7 @@ JMK Contents is a web platform for promoting and managing Korean certification e
 
 - **Production URL**: https://jmkcontents.vercel.app
 - **GitHub**: https://github.com/jmkcontents/jmkcontents
-- **Tech Stack**: Next.js 15, React 19, TypeScript, Tailwind CSS, Supabase/Firebase, Vercel
+- **Tech Stack**: Next.js 15, React 19, TypeScript, Tailwind CSS, Firebase, Vercel
 - **Contact**: bombezzang2607@gmail.com
 
 ## Repository Structure
@@ -19,12 +19,22 @@ This is a monorepo with the Next.js application in the `jmk-contents-web` direct
 jmkcontents/
 ├── jmk-contents-web/          # Main Next.js 15 application
 │   ├── app/                   # App Router (Next.js 15)
+│   │   ├── apps/[bundle_id]/ # Dynamic app pages
+│   │   │   ├── page.tsx      # App detail page
+│   │   │   ├── concepts/     # Concepts page with filtering
+│   │   │   └── lectures/     # Lectures page (future)
+│   │   ├── apps/page.tsx     # App listing
+│   │   └── page.tsx          # Homepage
 │   ├── components/            # React components
-│   ├── lib/                   # Core libraries
-│   │   ├── api/              # API functions (apps.ts, contact.ts)
-│   │   ├── supabase/         # Supabase client setup
-│   │   └── firebase/         # Firebase admin setup
-│   └── supabase/migrations/  # Database migrations
+│   │   ├── ui/               # shadcn/ui components
+│   │   ├── AppCard.tsx       # App tile component
+│   │   ├── ConceptCard.tsx   # Concept tile component
+│   │   └── ConceptDetailModal.tsx  # Concept detail modal
+│   └── lib/                   # Core libraries
+│       └── firebase/         # Firebase admin setup
+│           ├── admin.ts      # Firebase Admin SDK
+│           ├── apps.ts       # Data fetching functions
+│           └── types.ts      # TypeScript types
 ├── CLAUDE.md                  # This file
 ├── DEPLOYMENT_GUIDE.md        # Operations and deployment guide
 └── JMK_CONTENTS_DEVELOPMENT_PLAN.md  # Development roadmap
@@ -54,33 +64,37 @@ git push origin main
 
 ## Architecture
 
-### Database: Dual Backend Support
+### Database: Firebase Firestore
 
-The project supports **both Supabase and Firebase**. This dual setup allows migration flexibility:
+The project uses **Firebase Firestore** exclusively for data storage:
 
-1. **Supabase** (Primary, currently active):
-   - PostgreSQL database
-   - Schema defined in [supabase/migrations/20260205_initial_schema.sql](jmk-contents-web/supabase/migrations/20260205_initial_schema.sql)
-   - Client setup: [lib/supabase/](jmk-contents-web/lib/supabase/)
-   - TypeScript types auto-generated: [lib/supabase/types.ts](jmk-contents-web/lib/supabase/types.ts)
+- **Firebase Project**: `exam-affiliate-ads`
+- **Console**: https://console.firebase.google.com/project/exam-affiliate-ads/firestore
+- **Admin SDK**: Server-side only using [lib/firebase/admin.ts](jmk-contents-web/lib/firebase/admin.ts)
+- **API Functions**: [lib/firebase/apps.ts](jmk-contents-web/lib/firebase/apps.ts)
+- **TypeScript Types**: [lib/firebase/types.ts](jmk-contents-web/lib/firebase/types.ts)
 
-2. **Firebase** (Alternative implementation):
-   - Firestore database
-   - Admin SDK setup: [lib/firebase/admin.ts](jmk-contents-web/lib/firebase/admin.ts)
-   - Mirror API functions: [lib/firebase/apps.ts](jmk-contents-web/lib/firebase/apps.ts)
+### Database Collections
 
-**Important**: Both implementations exist in parallel with identical function signatures. To switch between backends, update imports in page files from `@/lib/api/apps` (Supabase) to `@/lib/firebase/apps` (Firebase).
+Four main Firestore collections:
 
-### Database Tables
+- **apps**: iOS app metadata
+  - Document ID: `bundle_id` (last part of iOS bundle ID, e.g., "indsafety")
+  - Fields: app_name, app_name_full, description, categories, status, rating, download_count, etc.
 
-Four main tables (Supabase) / collections (Firebase):
+- **concepts**: Learning concepts/study materials
+  - Document ID: `{app_id}_{concept_id}` (e.g., "indsafety_1")
+  - Fields: app_id, category, title, content, importance (1-5), keywords, study_note
 
-- **apps**: iOS app metadata (bundle_id, name, description, stats)
-- **concepts**: Learning concepts/study materials linked to apps
 - **lectures**: Audio lectures with transcripts
-- **contact_submissions**: User contact form submissions
+  - Document ID: Auto-generated
+  - Fields: app_id, category, title, audio_url, transcript, duration
 
-See [lib/supabase/types.ts](jmk-contents-web/lib/supabase/types.ts) for complete type definitions.
+- **contact_submissions**: User contact form submissions
+  - Document ID: Auto-generated
+  - Fields: app_id, email, subject, message, status
+
+See [lib/firebase/types.ts](jmk-contents-web/lib/firebase/types.ts) for complete type definitions.
 
 ### Next.js Rendering Strategy
 
@@ -102,19 +116,27 @@ export const revalidate = 3600 // Revalidate every hour
 
 ### API Pattern
 
-All data fetching functions follow a consistent pattern in [lib/api/apps.ts](jmk-contents-web/lib/api/apps.ts):
+All data fetching functions use Firebase Admin SDK in [lib/firebase/apps.ts](jmk-contents-web/lib/firebase/apps.ts):
 
 ```typescript
-// Server-side data fetching
-import { createClient } from '@/lib/supabase/server'
+// Server-side data fetching with Firebase
+import { getFirestoreDb } from '@/lib/firebase/admin'
+import { COLLECTIONS } from '@/lib/firebase/types'
 
 export async function getApps(): Promise<App[]> {
-  const supabase = await createClient()
-  const { data, error } = await supabase
-    .from('apps')
-    .select('*')
-    .eq('status', 'published')
-  // ...
+  const db = getFirestoreDb()
+  const snapshot = await db
+    .collection(COLLECTIONS.APPS)
+    .where('status', '==', 'published')
+    .orderBy('created_at', 'desc')
+    .get()
+
+  return snapshot.docs.map(doc => ({
+    ...doc.data(),
+    bundle_id: doc.id,
+    created_at: doc.data().created_at?.toDate() || new Date(),
+    updated_at: doc.data().updated_at?.toDate() || new Date(),
+  })) as App[]
 }
 ```
 
@@ -125,11 +147,11 @@ These functions are called directly in Server Components.
 ### Adding New Apps
 
 Apps can be added via:
-1. Supabase Dashboard (recommended): https://supabase.com/dashboard
-2. SQL queries in Supabase SQL Editor
+1. Firebase Console (recommended): https://console.firebase.google.com/project/exam-affiliate-ads/firestore
+2. Server-side scripts using Firebase Admin SDK
 3. Future admin dashboard (Phase 4)
 
-See [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md#새로운-앱-추가-방법) for detailed instructions.
+Document ID must be the bundle_id (last part of iOS bundle ID, e.g., "indsafety" from "com.eggsoft.indsafety").
 
 ### Adding New Pages
 
@@ -160,30 +182,31 @@ export default async function NewPage() {
 Required for development and production:
 
 ```bash
-# Supabase
-NEXT_PUBLIC_SUPABASE_URL=https://bzqifzrkikanhvylwfjv.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIs...
-SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIs...  # Server-only
-
-# Firebase (if using Firebase backend)
-FIREBASE_PROJECT_ID=...
-FIREBASE_PRIVATE_KEY=...
-FIREBASE_CLIENT_EMAIL=...
+# Firebase Admin SDK (Server-only)
+FIREBASE_SERVICE_ACCOUNT_KEY='{"type":"service_account","project_id":"exam-affiliate-ads",...}'
 
 # Contact
 CONTACT_EMAIL=bombezzang2607@gmail.com
+
+# Analytics (Optional)
+NEXT_PUBLIC_GA_ID=
 ```
 
-Local development uses `.env.local`. Production variables are set in Vercel Dashboard.
+**Important**:
+- The `FIREBASE_SERVICE_ACCOUNT_KEY` is a JSON string containing the Firebase service account credentials
+- Local development uses `.env.local`
+- Production variables are set in Vercel Dashboard
+- Never commit the `.env` file to Git
 
 ### TypeScript
 
 - Strict mode enabled
-- Database types are auto-generated in [lib/supabase/types.ts](jmk-contents-web/lib/supabase/types.ts)
-- Always use proper types from Database schema:
+- Database types are defined in [lib/firebase/types.ts](jmk-contents-web/lib/firebase/types.ts)
+- Always use proper types from Firebase schema:
   ```typescript
-  import type { Database } from '@/lib/supabase/types'
-  type App = Database['public']['Tables']['apps']['Row']
+  import { App, Concept, Lecture, COLLECTIONS } from '@/lib/firebase/types'
+
+  // All types are interfaces matching Firestore document structure
   ```
 
 ### Testing Production Build
@@ -229,19 +252,20 @@ git push origin main
 
 ## Current Status (2026-02-05)
 
-### Completed (Phase 1-3)
+### Completed (Phase 1-4)
 - ✅ Next.js 15 setup with App Router
-- ✅ Supabase/Firebase dual backend
+- ✅ Firebase Firestore backend (migrated from Supabase)
 - ✅ Homepage, app listing, and app detail pages
+- ✅ Concepts page with filtering and search
 - ✅ SSG/ISR implementation
 - ✅ shadcn/ui component library
 - ✅ Responsive design
 - ✅ Vercel production deployment
 - ✅ Cloudflare DNS configuration
 
-### In Progress (Phase 4)
-- 🔄 App concepts/lectures pages
-- 🔄 Image upload and Storage integration
+### In Progress (Phase 5)
+- 🔄 Lectures page (/apps/[bundle_id]/lectures)
+- 🔄 Image upload and Firebase Storage integration
 - 🔄 Admin dashboard for content management
 - 🔄 Contact form functionality
 - 🔄 Google Analytics integration
@@ -256,16 +280,23 @@ git push origin main
 ### Data Not Updating
 - ISR revalidates every 1 hour
 - For immediate updates, redeploy via `vercel --prod`
-- Check Supabase RLS policies if data access fails
+- Check Firebase Firestore rules if data access fails
+- Verify `FIREBASE_SERVICE_ACCOUNT_KEY` is properly set
 
 ### TypeScript Errors
 - Run `npm run lint` to check for issues
 - Ensure imports use proper paths with `@/` alias
-- Verify database types match schema in [lib/supabase/types.ts](jmk-contents-web/lib/supabase/types.ts)
+- Verify database types match schema in [lib/firebase/types.ts](jmk-contents-web/lib/firebase/types.ts)
+
+### Firebase Admin Initialization Errors
+- Check that `FIREBASE_SERVICE_ACCOUNT_KEY` environment variable is set
+- Verify the JSON is properly formatted (no syntax errors)
+- Ensure the service account has proper permissions in Firebase Console
 
 ## Additional Resources
 
+- **Firebase Console**: https://console.firebase.google.com/project/exam-affiliate-ads/firestore
+- **Firebase Data Structure Guide**: See `/Users/jongminkim/Desktop/project/35/src/exam_pipeline/docs/FIREBASE_DATA_STRUCTURE.md`
 - **Deployment Guide**: See [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) for operations and maintenance
 - **Development Plan**: See [JMK_CONTENTS_DEVELOPMENT_PLAN.md](JMK_CONTENTS_DEVELOPMENT_PLAN.md) for roadmap
-- **Supabase Dashboard**: https://supabase.com/dashboard (Project: bzqifzrkikanhvylwfjv)
 - **Vercel Dashboard**: https://vercel.com/dashboard

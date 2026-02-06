@@ -1,5 +1,5 @@
 import { AppCard } from '@/components/AppCard'
-import { getApps } from '@/lib/api/apps'
+import { getApps } from '@/lib/firebase/apps'
 
 export const revalidate = 3600 // Revalidate every hour
 

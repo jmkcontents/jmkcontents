@@ -1,6 +1,6 @@
 import { AppCard } from '@/components/AppCard'
 import { Button } from '@/components/ui/button'
-import { getFeaturedApps, getApps } from '@/lib/api/apps'
+import { getFeaturedApps, getApps } from '@/lib/firebase/apps'
 import Link from 'next/link'
 
 export const revalidate = 3600 // Revalidate every hour

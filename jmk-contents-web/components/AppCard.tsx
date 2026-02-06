@@ -1,16 +1,10 @@
 import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { App } from '@/lib/firebase/types'
 
 interface AppCardProps {
-  app: {
-    bundle_id: string
-    app_name: string
-    description: string | null
-    icon_url: string | null
-    categories: string[] | null
-    rating: number | null
-  }
+  app: App
 }
 
 export function AppCard({ app }: AppCardProps) {

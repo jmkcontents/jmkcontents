@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation'
-import { getAppByBundleId } from '@/lib/api/apps'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { getAppByBundleId } from '@/lib/firebase/apps'
+import { getFirestoreDb } from '@/lib/firebase/admin'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import Link from 'next/link'
@@ -11,20 +11,24 @@ interface AppPageProps {
   }>
 }
 
-// Generate static params for all published apps
-export async function generateStaticParams() {
-  const supabase = createAdminClient()
-  const { data: apps } = await supabase
-    .from('apps')
-    .select('bundle_id')
-    .eq('status', 'published')
+// Force dynamic rendering (temporarily disabled SSG due to Firebase Admin SDK build issues)
+export const dynamic = 'force-dynamic'
+export const revalidate = 3600 // Revalidate every hour
 
-  return (
-    apps?.map((app: { bundle_id: string }) => ({
-      bundle_id: app.bundle_id,
-    })) || []
-  )
-}
+// Generate static params for all published apps
+// TODO: Re-enable when Firebase Admin SDK Turbopack compatibility is resolved
+// export async function generateStaticParams() {
+//   const db = getFirestoreDb()
+//   const snapshot = await db
+//     .collection('apps')
+//     .where('status', '==', 'published')
+//     .select('__name__')
+//     .get()
+
+//   return snapshot.docs.map((doc) => ({
+//     bundle_id: doc.id,
+//   }))
+// }
 
 // Generate metadata for SEO
 export async function generateMetadata({ params }: AppPageProps) {
