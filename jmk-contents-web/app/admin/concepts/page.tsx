@@ -3,7 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { getFirestoreDb } from '@/lib/firebase/admin'
 import { COLLECTIONS, Concept } from '@/lib/firebase/types'
-import { BookOpen, Plus, Star } from 'lucide-react'
+import { BookOpen, Plus, Pencil } from 'lucide-react'
+import { DeleteConceptButton } from '@/components/admin/DeleteConceptButton'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -44,10 +45,12 @@ export default async function AdminConceptsPage() {
           <h1 className="text-3xl font-bold mb-2">Concepts 관리</h1>
           <p className="text-muted-foreground">등록된 개념: {totalCount}개</p>
         </div>
-        <Button className="gap-2" disabled>
-          <Plus className="w-4 h-4" />
-          새 개념 추가 (준비 중)
-        </Button>
+        <Link href="/admin/concepts/new">
+          <Button className="gap-2">
+            <Plus className="w-4 h-4" />
+            새 개념 추가
+          </Button>
+        </Link>
       </div>
 
       {/* Stats */}
@@ -97,6 +100,15 @@ export default async function AdminConceptsPage() {
                       <span>{new Date(concept.created_at).toLocaleDateString('ko-KR')}</span>
                     </div>
                   </div>
+                  <div className="flex gap-2">
+                    <Link href={`/admin/concepts/${concept.id}/edit`}>
+                      <Button variant="outline" size="sm" className="gap-1">
+                        <Pencil className="w-3 h-3" />
+                        수정
+                      </Button>
+                    </Link>
+                    <DeleteConceptButton conceptId={concept.id} conceptTitle={concept.title} />
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
@@ -122,31 +134,15 @@ export default async function AdminConceptsPage() {
           <CardContent className="py-12 text-center">
             <BookOpen className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
             <p className="text-lg text-muted-foreground mb-4">등록된 개념이 없습니다</p>
-            <Button disabled className="gap-2">
-              <Plus className="w-4 h-4" />
-              첫 번째 개념 추가하기 (준비 중)
-            </Button>
+            <Link href="/admin/concepts/new">
+              <Button className="gap-2">
+                <Plus className="w-4 h-4" />
+                첫 번째 개념 추가하기
+              </Button>
+            </Link>
           </CardContent>
         </Card>
       )}
-
-      {/* Note */}
-      <Card className="bg-blue-50 border-blue-200">
-        <CardContent className="pt-6">
-          <p className="text-sm text-blue-800">
-            💡 <strong>안내:</strong> Concepts CRUD 기능은 현재 개발 중입니다. Firebase
-            Console에서 직접 관리하실 수 있습니다.
-          </p>
-          <a
-            href="https://console.firebase.google.com/project/exam-affiliate-ads/firestore/databases/-default-/data/~2Fconcepts"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-sm text-blue-600 hover:underline mt-2 inline-block"
-          >
-            Firebase Console에서 관리하기 →
-          </a>
-        </CardContent>
-      </Card>
     </div>
   )
 }

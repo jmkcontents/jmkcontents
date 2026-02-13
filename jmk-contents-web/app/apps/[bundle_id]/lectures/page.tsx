@@ -10,7 +10,8 @@ interface LecturesPageProps {
   }>
 }
 
-// Generate metadata for SEO
+export const revalidate = 3600
+
 export async function generateMetadata({ params }: LecturesPageProps) {
   const { bundle_id } = await params
   const app = await getAppByBundleId(bundle_id)
@@ -21,9 +22,17 @@ export async function generateMetadata({ params }: LecturesPageProps) {
     }
   }
 
+  const description = `${app.app_name_full || app.app_name} 시험 대비 음성 강의를 들어보세요.`
+
   return {
     title: `음성 강의 - ${app.app_name} - JMK Contents`,
-    description: `${app.app_name_full || app.app_name} 시험 대비 음성 강의를 들어보세요.`,
+    description,
+    openGraph: {
+      title: `${app.app_name} 음성 강의`,
+      description,
+      url: `https://jmkcontents.com/apps/${bundle_id}/lectures`,
+      type: 'website',
+    },
   }
 }
 

@@ -10,7 +10,8 @@ interface ConceptsPageProps {
   }>
 }
 
-// Generate metadata for SEO
+export const revalidate = 3600
+
 export async function generateMetadata({ params }: ConceptsPageProps) {
   const { bundle_id } = await params
   const app = await getAppByBundleId(bundle_id)
@@ -21,9 +22,17 @@ export async function generateMetadata({ params }: ConceptsPageProps) {
     }
   }
 
+  const description = `${app.app_name_full || app.app_name} 시험의 핵심 개념을 정리했습니다.`
+
   return {
     title: `핵심 개념 - ${app.app_name} - JMK Contents`,
-    description: `${app.app_name_full || app.app_name} 시험의 핵심 개념을 정리했습니다.`,
+    description,
+    openGraph: {
+      title: `${app.app_name} 핵심 개념`,
+      description,
+      url: `https://jmkcontents.com/apps/${bundle_id}/concepts`,
+      type: 'website',
+    },
   }
 }
 

@@ -1,5 +1,5 @@
 import { getFirestoreDb } from './admin'
-import { App, Concept, Lecture, COLLECTIONS } from './types'
+import { App, AppCategory, Concept, Lecture, COLLECTIONS } from './types'
 
 /**
  * Firestore에서 앱 데이터 조회 함수들
@@ -106,6 +106,54 @@ export async function getAppsByCategory(category: string): Promise<App[]> {
     })) as App[]
   } catch (error) {
     console.error('Error fetching apps by category from Firestore:', error)
+    return []
+  }
+}
+
+/**
+ * 앱 분류(app_category)별 앱 필터링
+ */
+export async function getAppsByAppCategory(appCategory: AppCategory): Promise<App[]> {
+  try {
+    const db = getFirestoreDb()
+    const snapshot = await db
+      .collection(COLLECTIONS.APPS)
+      .where('status', '==', 'published')
+      .where('app_category', '==', appCategory)
+      .orderBy('created_at', 'desc')
+      .get()
+
+    return snapshot.docs.map(doc => ({
+      ...doc.data(),
+      bundle_id: doc.id,
+      created_at: doc.data().created_at?.toDate() || new Date(),
+      updated_at: doc.data().updated_at?.toDate() || new Date(),
+    })) as App[]
+  } catch (error) {
+    console.error('Error fetching apps by app_category from Firestore:', error)
+    return []
+  }
+}
+
+/**
+ * 모든 앱 가져오기 (admin용, draft 포함)
+ */
+export async function getAllApps(): Promise<App[]> {
+  try {
+    const db = getFirestoreDb()
+    const snapshot = await db
+      .collection(COLLECTIONS.APPS)
+      .orderBy('created_at', 'desc')
+      .get()
+
+    return snapshot.docs.map(doc => ({
+      ...doc.data(),
+      bundle_id: doc.id,
+      created_at: doc.data().created_at?.toDate() || new Date(),
+      updated_at: doc.data().updated_at?.toDate() || new Date(),
+    })) as App[]
+  } catch (error) {
+    console.error('Error fetching all apps from Firestore:', error)
     return []
   }
 }

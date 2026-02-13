@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { getFirestoreDb } from '@/lib/firebase/admin'
-import { COLLECTIONS, App } from '@/lib/firebase/types'
+import { COLLECTIONS, AppCategory } from '@/lib/firebase/types'
 
 export interface AppFormData {
   bundle_id: string
@@ -12,7 +12,8 @@ export interface AppFormData {
   description_full?: string
   app_store_url?: string
   icon_url?: string
-  categories?: string[] // JSON string으로 전달받음
+  categories?: string[]
+  app_category?: AppCategory | ''
   status: 'draft' | 'published'
   is_featured: boolean
   rating?: number
@@ -32,7 +33,6 @@ export async function createApp(data: AppFormData): Promise<AppActionResult> {
   try {
     const db = getFirestoreDb()
 
-    // bundle_id 중복 체크
     const existingDoc = await db.collection(COLLECTIONS.APPS).doc(data.bundle_id).get()
     if (existingDoc.exists) {
       return {
@@ -41,7 +41,7 @@ export async function createApp(data: AppFormData): Promise<AppActionResult> {
       }
     }
 
-    const appData = {
+    const appData: Record<string, any> = {
       app_name: data.app_name,
       app_name_full: data.app_name_full || data.app_name,
       description: data.description || '',
@@ -53,8 +53,13 @@ export async function createApp(data: AppFormData): Promise<AppActionResult> {
       is_featured: data.is_featured,
       rating: data.rating || 0,
       download_count: data.download_count || 0,
+      marketing_url: `https://jmkcontents.com/apps/${data.bundle_id}`,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
+    }
+
+    if (data.app_category) {
+      appData.app_category = data.app_category
     }
 
     await db.collection(COLLECTIONS.APPS).doc(data.bundle_id).set(appData)
@@ -102,8 +107,13 @@ export async function updateApp(
       updated_at: new Date().toISOString(),
     }
 
-    // bundle_id는 수정 불가 (Document ID이므로)
+    // bundle_id는 수정 불가 (Document ID)
     delete updateData.bundle_id
+
+    // app_category가 빈 문자열이면 필드 제거
+    if (updateData.app_category === '') {
+      delete updateData.app_category
+    }
 
     await docRef.update(updateData)
 
@@ -126,7 +136,7 @@ export async function updateApp(
 }
 
 /**
- * App 삭제
+ * App 삭제 (M2: 관련 concepts, lectures 연쇄 삭제)
  */
 export async function deleteApp(bundleId: string): Promise<AppActionResult> {
   try {
@@ -142,18 +152,43 @@ export async function deleteApp(bundleId: string): Promise<AppActionResult> {
       }
     }
 
-    // TODO: 관련된 concepts, lectures도 삭제할지 결정
-    // 현재는 App만 삭제
+    // 관련 concepts 삭제
+    const conceptsSnapshot = await db
+      .collection(COLLECTIONS.CONCEPTS)
+      .where('app_id', '==', bundleId)
+      .get()
 
+    // 관련 lectures 삭제
+    const lecturesSnapshot = await db
+      .collection(COLLECTIONS.LECTURES)
+      .where('app_id', '==', bundleId)
+      .get()
+
+    // Batch 삭제 (500개 제한 고려)
+    const allDocs = [...conceptsSnapshot.docs, ...lecturesSnapshot.docs]
+    const BATCH_LIMIT = 500
+
+    for (let i = 0; i < allDocs.length; i += BATCH_LIMIT) {
+      const batch = db.batch()
+      const chunk = allDocs.slice(i, i + BATCH_LIMIT)
+      chunk.forEach(d => batch.delete(d.ref))
+      await batch.commit()
+    }
+
+    // 앱 문서 삭제
     await docRef.delete()
+
+    const deletedCount = conceptsSnapshot.size + lecturesSnapshot.size
 
     revalidatePath('/apps')
     revalidatePath('/')
     revalidatePath('/admin/apps')
+    revalidatePath('/admin/concepts')
+    revalidatePath('/admin/lectures')
 
     return {
       success: true,
-      message: 'App이 성공적으로 삭제되었습니다.',
+      message: `App이 삭제되었습니다. (관련 데이터 ${deletedCount}건 함께 삭제)`,
     }
   } catch (error) {
     console.error('Delete app error:', error)

@@ -104,12 +104,13 @@ export function ConceptDetailModal({ concept, onClose }: ConceptDetailModalProps
             </section>
           )}
 
-          {/* Related Questions (향후 구현) */}
+          {/* Related Questions */}
           {concept.related_question_ids && concept.related_question_ids.length > 0 && (
             <section>
               <h3 className="text-lg font-semibold mb-3">📚 관련 문제</h3>
               <p className="text-sm text-muted-foreground">
                 {concept.related_question_ids.length}개의 관련 문제가 있습니다.
+                앱에서 직접 풀어보세요!
               </p>
             </section>
           )}

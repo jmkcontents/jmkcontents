@@ -27,18 +27,21 @@ export function AppCard({ app }: AppCardProps) {
           )}
           <div className="flex-1">
             <CardTitle className="text-lg">{app.app_name}</CardTitle>
-            {app.categories && (
-              <div className="flex gap-2 mt-2">
-                {app.categories.slice(0, 2).map((category) => (
-                  <span
-                    key={category}
-                    className="text-xs px-2 py-1 bg-secondary text-secondary-foreground rounded"
-                  >
-                    {category}
-                  </span>
-                ))}
-              </div>
-            )}
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              {app.app_category && (
+                <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-800 rounded font-medium">
+                  {app.app_category}
+                </span>
+              )}
+              {app.categories && app.categories.slice(0, 2).map((category) => (
+                <span
+                  key={category}
+                  className="text-xs px-2 py-0.5 bg-secondary text-secondary-foreground rounded"
+                >
+                  {category}
+                </span>
+              ))}
+            </div>
           </div>
         </div>
       </CardHeader>

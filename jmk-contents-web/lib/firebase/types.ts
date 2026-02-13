@@ -3,13 +3,18 @@
  * Supabase에서 마이그레이션
  */
 
+export type AppCategory = '기능사' | '산업기사' | '기사' | '컴퓨터자격증' | '기타전문자격증'
+
+export const APP_CATEGORIES: AppCategory[] = ['기능사', '산업기사', '기사', '컴퓨터자격증', '기타전문자격증']
+
 export interface App {
   bundle_id: string // 문서 ID
   app_name: string
   app_name_full?: string
   description?: string
   description_full?: string
-  categories?: string[]
+  categories?: string[] // 과목 카테고리 (예: ["산업안전관리론", "인간공학"])
+  app_category?: AppCategory // 앱 분류 (기능사/산업기사/기사 등)
   status: 'draft' | 'published' | 'archived'
   icon_url?: string
   app_store_url?: string
