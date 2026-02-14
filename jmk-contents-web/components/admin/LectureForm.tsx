@@ -30,6 +30,7 @@ export function LectureForm({ mode, initialData, apps }: LectureFormProps) {
     title: initialData?.title || '',
     description: initialData?.description || '',
     audio_url: initialData?.audio_url || '',
+    youtube_video_id: initialData?.youtube_video_id || '',
     duration_seconds: initialData?.duration_seconds || 0,
     transcript: initialData?.transcript || '',
   })
@@ -157,11 +158,30 @@ export function LectureForm({ mode, initialData, apps }: LectureFormProps) {
             />
           </div>
 
+          {/* YouTube Video ID */}
+          <div>
+            <label htmlFor="youtube_video_id" className="block text-sm font-medium mb-2">
+              YouTube Video ID
+            </label>
+            <Input
+              id="youtube_video_id"
+              value={formData.youtube_video_id}
+              onChange={(e) => setFormData({ ...formData, youtube_video_id: e.target.value })}
+              placeholder="예: cMDj0pirZFI"
+              disabled={isSubmitting}
+            />
+            {formData.youtube_video_id && (
+              <p className="text-xs text-muted-foreground mt-1">
+                미리보기: youtube.com/watch?v={formData.youtube_video_id}
+              </p>
+            )}
+          </div>
+
           {/* 오디오 URL + 재생 시간 */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label htmlFor="audio_url" className="block text-sm font-medium mb-2">
-                오디오 URL
+                오디오 URL (선택)
               </label>
               <Input
                 id="audio_url"

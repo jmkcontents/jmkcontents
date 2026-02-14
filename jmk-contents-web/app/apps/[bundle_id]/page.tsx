@@ -216,9 +216,9 @@ export default async function AppPage({ params }: AppPageProps) {
             <Link href={`/apps/${app.bundle_id}/lectures`}>
               <Card className="hover:bg-muted/50 transition-colors cursor-pointer h-full">
                 <CardHeader>
-                  <CardTitle>🎙️ 음성 강의</CardTitle>
+                  <CardTitle>🎬 영상 강의</CardTitle>
                   <CardDescription>
-                    {lectures.length}개의 강의를 들으며 효과적으로 학습하세요
+                    {lectures.length}개의 영상 강의로 효과적으로 학습하세요
                   </CardDescription>
                 </CardHeader>
               </Card>

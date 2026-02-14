@@ -60,13 +60,16 @@ export function LectureCard({ lecture, onClick }: LectureCardProps) {
               <span>{formatDuration(lecture.duration_seconds)}</span>
             </div>
           )}
-          {lecture.audio_url && (
+          {lecture.youtube_video_id && (
+            <span className="text-primary text-xs">🎬 영상 있음</span>
+          )}
+          {lecture.audio_url && !lecture.youtube_video_id && (
             <span className="text-primary text-xs">🎧 오디오 있음</span>
           )}
         </div>
 
         <div className="text-xs text-primary mt-2 text-center">
-          자세히 보기 / 재생
+          {lecture.youtube_video_id ? '영상 보기' : '자세히 보기'}
         </div>
       </CardContent>
     </Card>

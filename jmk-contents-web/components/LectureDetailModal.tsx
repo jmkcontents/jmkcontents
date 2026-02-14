@@ -75,8 +75,24 @@ export function LectureDetailModal({ lecture, onClose }: LectureDetailModalProps
 
         {/* Content */}
         <div className="p-6 space-y-6">
-          {/* Audio Player */}
-          {lecture.audio_url && (
+          {/* YouTube Video Player */}
+          {lecture.youtube_video_id && (
+            <section>
+              <h3 className="text-lg font-semibold mb-3">🎬 영상 강의</h3>
+              <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+                <iframe
+                  className="absolute top-0 left-0 w-full h-full rounded-lg"
+                  src={`https://www.youtube.com/embed/${lecture.youtube_video_id}`}
+                  title={lecture.title}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              </div>
+            </section>
+          )}
+
+          {/* Audio Player (레거시 지원) */}
+          {lecture.audio_url && !lecture.youtube_video_id && (
             <section>
               <h3 className="text-lg font-semibold mb-3">🎧 오디오 강의</h3>
               <div className="bg-muted/50 p-4 rounded-lg">
@@ -114,7 +130,7 @@ export function LectureDetailModal({ lecture, onClose }: LectureDetailModalProps
           )}
 
           {/* Empty State */}
-          {!lecture.audio_url && !lecture.description && !lecture.transcript && (
+          {!lecture.youtube_video_id && !lecture.audio_url && !lecture.description && !lecture.transcript && (
             <div className="text-center py-8 text-muted-foreground">
               <p>강의 내용이 아직 준비되지 않았습니다.</p>
             </div>

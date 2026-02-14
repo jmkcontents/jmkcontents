@@ -48,6 +48,7 @@ export interface Lecture {
   title: string
   description?: string
   audio_url?: string
+  youtube_video_id?: string // YouTube 영상 ID (예: 'cMDj0pirZFI')
   duration_seconds?: number
   transcript?: string
   created_at: Date

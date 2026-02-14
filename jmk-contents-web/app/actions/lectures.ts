@@ -11,6 +11,7 @@ export interface LectureFormData {
   title: string
   description?: string
   audio_url?: string
+  youtube_video_id?: string
   duration_seconds?: number
   transcript?: string
 }
@@ -32,6 +33,7 @@ export async function createLecture(data: LectureFormData): Promise<LectureActio
       title: data.title,
       description: data.description || '',
       audio_url: data.audio_url || '',
+      youtube_video_id: data.youtube_video_id || '',
       duration_seconds: data.duration_seconds || 0,
       transcript: data.transcript || '',
       created_at: new Date().toISOString(),
