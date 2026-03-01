@@ -7,6 +7,34 @@ import { App, AppCategory, Concept, Lecture, COLLECTIONS } from './types'
  */
 
 /**
+ * Firestore Timestamp/ISO 문자열/Date를 안전하게 JS Date로 변환
+ */
+function toDate(value: unknown): Date {
+  if (!value) return new Date()
+
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? new Date() : value
+  }
+
+  if (typeof value === 'string' || typeof value === 'number') {
+    const parsed = new Date(value)
+    return Number.isNaN(parsed.getTime()) ? new Date() : parsed
+  }
+
+  if (typeof value === 'object') {
+    const candidate = value as { toDate?: () => Date }
+    if (typeof candidate.toDate === 'function') {
+      const converted = candidate.toDate()
+      return converted instanceof Date && !Number.isNaN(converted.getTime())
+        ? converted
+        : new Date()
+    }
+  }
+
+  return new Date()
+}
+
+/**
  * 모든 published 앱 목록 가져오기
  */
 export async function getApps(): Promise<App[]> {
@@ -21,8 +49,8 @@ export async function getApps(): Promise<App[]> {
     return snapshot.docs.map(doc => ({
       ...doc.data(),
       bundle_id: doc.id,
-      created_at: doc.data().created_at?.toDate() || new Date(),
-      updated_at: doc.data().updated_at?.toDate() || new Date(),
+      created_at: toDate(doc.data().created_at),
+      updated_at: toDate(doc.data().updated_at),
     })) as App[]
   } catch (error) {
     console.error('Error fetching apps from Firestore:', error)
@@ -47,8 +75,8 @@ export async function getFeaturedApps(): Promise<App[]> {
     return snapshot.docs.map(doc => ({
       ...doc.data(),
       bundle_id: doc.id,
-      created_at: doc.data().created_at?.toDate() || new Date(),
-      updated_at: doc.data().updated_at?.toDate() || new Date(),
+      created_at: toDate(doc.data().created_at),
+      updated_at: toDate(doc.data().updated_at),
     })) as App[]
   } catch (error) {
     console.error('Error fetching featured apps from Firestore:', error)
@@ -76,8 +104,8 @@ export async function getAppByBundleId(bundleId: string): Promise<App | null> {
     return {
       ...data,
       bundle_id: doc.id,
-      created_at: data.created_at?.toDate() || new Date(),
-      updated_at: data.updated_at?.toDate() || new Date(),
+      created_at: toDate(data.created_at),
+      updated_at: toDate(data.updated_at),
     } as App
   } catch (error) {
     console.error('Error fetching app by bundle_id from Firestore:', error)
@@ -101,8 +129,8 @@ export async function getAppsByCategory(category: string): Promise<App[]> {
     return snapshot.docs.map(doc => ({
       ...doc.data(),
       bundle_id: doc.id,
-      created_at: doc.data().created_at?.toDate() || new Date(),
-      updated_at: doc.data().updated_at?.toDate() || new Date(),
+      created_at: toDate(doc.data().created_at),
+      updated_at: toDate(doc.data().updated_at),
     })) as App[]
   } catch (error) {
     console.error('Error fetching apps by category from Firestore:', error)
@@ -126,8 +154,8 @@ export async function getAppsByAppCategory(appCategory: AppCategory): Promise<Ap
     return snapshot.docs.map(doc => ({
       ...doc.data(),
       bundle_id: doc.id,
-      created_at: doc.data().created_at?.toDate() || new Date(),
-      updated_at: doc.data().updated_at?.toDate() || new Date(),
+      created_at: toDate(doc.data().created_at),
+      updated_at: toDate(doc.data().updated_at),
     })) as App[]
   } catch (error) {
     console.error('Error fetching apps by app_category from Firestore:', error)
@@ -149,8 +177,8 @@ export async function getAllApps(): Promise<App[]> {
     return snapshot.docs.map(doc => ({
       ...doc.data(),
       bundle_id: doc.id,
-      created_at: doc.data().created_at?.toDate() || new Date(),
-      updated_at: doc.data().updated_at?.toDate() || new Date(),
+      created_at: toDate(doc.data().created_at),
+      updated_at: toDate(doc.data().updated_at),
     })) as App[]
   } catch (error) {
     console.error('Error fetching all apps from Firestore:', error)
@@ -174,8 +202,8 @@ export async function getConceptsByAppId(appId: string): Promise<Concept[]> {
     return snapshot.docs.map(doc => ({
       ...doc.data(),
       id: doc.id,
-      created_at: doc.data().created_at?.toDate() || new Date(),
-      updated_at: doc.data().updated_at?.toDate() || new Date(),
+      created_at: toDate(doc.data().created_at),
+      updated_at: toDate(doc.data().updated_at),
     })) as Concept[]
   } catch (error) {
     console.error('Error fetching concepts from Firestore:', error)
@@ -203,8 +231,8 @@ export async function getConceptsByCategory(
     return snapshot.docs.map(doc => ({
       ...doc.data(),
       id: doc.id,
-      created_at: doc.data().created_at?.toDate() || new Date(),
-      updated_at: doc.data().updated_at?.toDate() || new Date(),
+      created_at: toDate(doc.data().created_at),
+      updated_at: toDate(doc.data().updated_at),
     })) as Concept[]
   } catch (error) {
     console.error('Error fetching concepts by category from Firestore:', error)
@@ -229,8 +257,8 @@ export async function getLecturesByAppId(appId: string): Promise<Lecture[]> {
       return {
         ...d,
         id: doc.id,
-        created_at: d.created_at?.toDate?.() || (typeof d.created_at === 'string' ? new Date(d.created_at) : new Date()),
-        updated_at: d.updated_at?.toDate?.() || (typeof d.updated_at === 'string' ? new Date(d.updated_at) : new Date()),
+        created_at: toDate(d.created_at),
+        updated_at: toDate(d.updated_at),
       }
     }) as Lecture[]
   } catch (error) {
@@ -260,8 +288,8 @@ export async function getLecturesByCategory(
       return {
         ...d,
         id: doc.id,
-        created_at: d.created_at?.toDate?.() || (typeof d.created_at === 'string' ? new Date(d.created_at) : new Date()),
-        updated_at: d.updated_at?.toDate?.() || (typeof d.updated_at === 'string' ? new Date(d.updated_at) : new Date()),
+        created_at: toDate(d.created_at),
+        updated_at: toDate(d.updated_at),
       }
     }) as Lecture[]
   } catch (error) {
@@ -289,8 +317,8 @@ export async function getAllConcepts(): Promise<(Concept & { app_name: string })
       ...doc.data(),
       id: doc.id,
       app_name: appMap.get(doc.data().app_id) || doc.data().app_id,
-      created_at: doc.data().created_at?.toDate?.() || new Date(),
-      updated_at: doc.data().updated_at?.toDate?.() || new Date(),
+      created_at: toDate(doc.data().created_at),
+      updated_at: toDate(doc.data().updated_at),
     })) as (Concept & { app_name: string })[]
   } catch (error) {
     console.error('Error fetching all concepts:', error)
@@ -319,8 +347,8 @@ export async function getAllLectures(): Promise<(Lecture & { app_name: string })
         ...d,
         id: doc.id,
         app_name: appMap.get(d.app_id) || d.app_id,
-        created_at: d.created_at?.toDate?.() || new Date(),
-        updated_at: d.updated_at?.toDate?.() || new Date(),
+        created_at: toDate(d.created_at),
+        updated_at: toDate(d.updated_at),
       }
     }) as (Lecture & { app_name: string })[]
   } catch (error) {
