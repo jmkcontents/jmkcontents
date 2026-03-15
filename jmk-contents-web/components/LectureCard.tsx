@@ -54,7 +54,7 @@ export function LectureCard({ lecture, onClick }: LectureCardProps) {
 
         {/* Duration and Audio Status */}
         <div className="flex items-center gap-4 mt-auto text-sm text-muted-foreground">
-          {lecture.duration_seconds && (
+          {typeof lecture.duration_seconds === 'number' && lecture.duration_seconds > 0 && (
             <div className="flex items-center gap-1">
               <Clock className="w-4 h-4" />
               <span>{formatDuration(lecture.duration_seconds)}</span>

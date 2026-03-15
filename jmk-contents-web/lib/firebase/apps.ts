@@ -1,5 +1,5 @@
 import { getFirestoreDb } from './admin'
-import { App, AppCategory, Concept, Lecture, COLLECTIONS } from './types'
+import { App, AppCategory, Concept, Lecture, COLLECTIONS, EmbeddedAppLecture } from './types'
 
 /**
  * Firestore에서 앱 데이터 조회 함수들
@@ -32,6 +32,51 @@ function toDate(value: unknown): Date {
   }
 
   return new Date()
+}
+
+function mapLectureDocument(
+  doc: FirebaseFirestore.QueryDocumentSnapshot<FirebaseFirestore.DocumentData>
+): Lecture {
+  const data = doc.data()
+
+  return {
+    ...data,
+    id: doc.id,
+    created_at: toDate(data.created_at),
+    updated_at: toDate(data.updated_at),
+  } as Lecture
+}
+
+function mapEmbeddedLecture(
+  app: App,
+  lecture: EmbeddedAppLecture,
+  index: number
+): Lecture {
+  const youtubeVideoId = lecture.youtube_video_id || lecture.videoId
+  const category = lecture.category || (lecture.subtitle && lecture.title ? lecture.title : undefined)
+  const title = lecture.subtitle || lecture.title || `영상 강의 ${index + 1}`
+  const description = lecture.description || lecture.subtitle
+
+  return {
+    id: `${app.bundle_id}_embedded_${youtubeVideoId || index}`,
+    app_id: app.bundle_id,
+    category,
+    title,
+    description,
+    youtube_video_id: youtubeVideoId,
+    duration_seconds: lecture.duration_seconds ?? lecture.duration,
+    transcript: lecture.transcript,
+    created_at: app.created_at,
+    updated_at: app.updated_at,
+  }
+}
+
+function getEmbeddedLecturesFromApp(app: App): Lecture[] {
+  if (!Array.isArray(app.lectures) || app.lectures.length === 0) {
+    return []
+  }
+
+  return app.lectures.map((lecture, index) => mapEmbeddedLecture(app, lecture, index))
 }
 
 /**
@@ -252,15 +297,16 @@ export async function getLecturesByAppId(appId: string): Promise<Lecture[]> {
       .orderBy('created_at', 'desc')
       .get()
 
-    return snapshot.docs.map(doc => {
-      const d = doc.data()
-      return {
-        ...d,
-        id: doc.id,
-        created_at: toDate(d.created_at),
-        updated_at: toDate(d.updated_at),
-      }
-    }) as Lecture[]
+    if (!snapshot.empty) {
+      return snapshot.docs.map(mapLectureDocument)
+    }
+
+    const app = await getAppByBundleId(appId)
+    if (!app) {
+      return []
+    }
+
+    return getEmbeddedLecturesFromApp(app)
   } catch (error) {
     console.error('Error fetching lectures from Firestore:', error)
     return []
@@ -275,23 +321,8 @@ export async function getLecturesByCategory(
   category: string
 ): Promise<Lecture[]> {
   try {
-    const db = getFirestoreDb()
-    const snapshot = await db
-      .collection(COLLECTIONS.LECTURES)
-      .where('app_id', '==', appId)
-      .where('category', '==', category)
-      .orderBy('created_at', 'desc')
-      .get()
-
-    return snapshot.docs.map(doc => {
-      const d = doc.data()
-      return {
-        ...d,
-        id: doc.id,
-        created_at: toDate(d.created_at),
-        updated_at: toDate(d.updated_at),
-      }
-    }) as Lecture[]
+    const lectures = await getLecturesByAppId(appId)
+    return lectures.filter((lecture) => lecture.category === category)
   } catch (error) {
     console.error('Error fetching lectures by category from Firestore:', error)
     return []
@@ -340,17 +371,20 @@ export async function getAllLectures(): Promise<(Lecture & { app_name: string })
     ])
 
     const appMap = new Map(apps.map(a => [a.bundle_id, a.app_name]))
+    const firestoreLectures = lecturesSnapshot.docs.map(mapLectureDocument)
+    const appsWithFirestoreLectures = new Set(firestoreLectures.map((lecture) => lecture.app_id))
+    const embeddedLectures = apps.flatMap((app) =>
+      appsWithFirestoreLectures.has(app.bundle_id) ? [] : getEmbeddedLecturesFromApp(app)
+    )
 
-    return lecturesSnapshot.docs.map(doc => {
-      const d = doc.data()
-      return {
-        ...d,
-        id: doc.id,
-        app_name: appMap.get(d.app_id) || d.app_id,
-        created_at: toDate(d.created_at),
-        updated_at: toDate(d.updated_at),
-      }
-    }) as (Lecture & { app_name: string })[]
+    const allLectures = [...firestoreLectures, ...embeddedLectures]
+      .map((lecture) => ({
+        ...lecture,
+        app_name: appMap.get(lecture.app_id) || lecture.app_id,
+      }))
+      .sort((a, b) => b.created_at.getTime() - a.created_at.getTime())
+
+    return allLectures as (Lecture & { app_name: string })[]
   } catch (error) {
     console.error('Error fetching all lectures:', error)
     return []
@@ -379,6 +413,15 @@ export async function getAppsWithContentCounts(): Promise<(App & { conceptCount:
     lecturesSnapshot.docs.forEach(doc => {
       const appId = doc.data().app_id
       lectureCounts.set(appId, (lectureCounts.get(appId) || 0) + 1)
+    })
+
+    apps.forEach((app) => {
+      if (!lectureCounts.has(app.bundle_id)) {
+        const embeddedLectureCount = getEmbeddedLecturesFromApp(app).length
+        if (embeddedLectureCount > 0) {
+          lectureCounts.set(app.bundle_id, embeddedLectureCount)
+        }
+      }
     })
 
     return apps.map(app => ({
